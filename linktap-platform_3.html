@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkTap — Tap-to-Link Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1428;
+    --surface:#171E3A;
+    --surface-2:#1E2749;
+    --border:rgba(237,239,247,0.12);
+    --text:#EDEFF7;
+    --text-dim:#A7ADC9;
+    --accent:#4CC3FF;
+    --accent-dim:rgba(76,195,255,0.15);
+    --danger:#FF6B6B;
+    --danger-dim:rgba(255,107,107,0.15);
+    --success:#4ADE80;
+    --radius:10px;
+    --radius-sm:6px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+    min-height:100vh;
+  }
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; font-weight:600; margin:0;}
+  p{margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace; letter-spacing:0.01em;}
+  button{font-family:inherit; cursor:pointer; border:none;}
+  input,select{font-family:inherit;}
+  a{color:inherit;}
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+  ::placeholder{color:var(--text-dim); opacity:0.7;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+  }
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ===== shared bits ===== */
+  .shell{max-width:640px; margin:0 auto; padding:48px 24px 80px;}
+  .shell-wide{max-width:920px; margin:0 auto; padding:48px 24px 80px;}
+  .eyebrow{color:var(--accent); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:10px; display:block;}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px;}
+  .field{margin-bottom:18px;}
+  .field label{display:block; font-size:0.85rem; color:var(--text-dim); margin-bottom:7px;}
+  .field input, .field select{
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
+    padding:12px 14px; border-radius:var(--radius-sm); font-size:0.95rem;
+  }
+  .field input:focus, .field select:focus{border-color:var(--accent);}
+  .row{display:flex; gap:12px;}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:12px 22px; border-radius:var(--radius-sm); font-size:0.9rem; font-weight:600;
+    position:relative; overflow:hidden; transition:transform 0.15s ease, background 0.2s ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--accent); color:#06121f;}
+  .btn-primary:hover{background:#6ccdff;}
+  .btn-ghost{background:transparent; border:1px solid var(--border); color:var(--text);}
+  .btn-ghost:hover{border-color:var(--accent); color:var(--accent);}
+  .btn-danger{background:var(--danger-dim); color:var(--danger);}
+  .btn-danger:hover{background:var(--danger); color:#2a0d0d;}
+  .btn-sm{padding:8px 14px; font-size:0.82rem;}
+  .btn-block{width:100%;}
+  .muted{color:var(--text-dim);}
+  .small{font-size:0.85rem;}
+  .center{text-align:center;}
+  .mt-8{margin-top:8px;} .mt-16{margin-top:16px;} .mt-24{margin-top:24px;} .mt-32{margin-top:32px;}
+  .divider{height:1px; background:var(--border); margin:28px 0;}
+  .badge{
+    display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px;
+    background:var(--surface-2); font-size:0.75rem; color:var(--text-dim);
+  }
+  .link-url-copy{
+    display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:10px 12px; font-size:0.82rem; word-break:break-all;
+  }
+  .link-url-copy .mono{flex:1; color:var(--accent);}
+  .icon-btn{
+    background:transparent; border:1px solid var(--border); border-radius:var(--radius-sm);
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center; color:var(--text-dim);
+    flex-shrink:0;
+  }
+  .icon-btn:hover{color:var(--text); border-color:var(--accent);}
+  svg{display:block;}
+
+  /* ===== ripple (signature) ===== */
+  .ripple-span{
+    position:absolute; border-radius:50%; background:rgba(255,255,255,0.5);
+    transform:scale(0); animation:rippleAnim 0.6s ease-out;
+    pointer-events:none;
+  }
+  @keyframes rippleAnim{ to{ transform:scale(3.2); opacity:0; } }
+
+  .avatar-ripple{
+    position:relative; width:96px; height:96px; margin:0 auto;
+  }
+  .avatar-ripple .ring{
+    position:absolute; inset:0; border-radius:50%; border:1.5px solid var(--accent);
+    opacity:0; animation:pulseRing 2.6s ease-out infinite;
+  }
+  .avatar-ripple .ring:nth-child(2){animation-delay:0.7s;}
+  .avatar-ripple .ring:nth-child(3){animation-delay:1.4s;}
+  @keyframes pulseRing{
+    0%{ transform:scale(1); opacity:0.55; }
+    100%{ transform:scale(1.9); opacity:0; }
+  }
+  .avatar-circle{
+    position:relative; z-index:2; width:96px; height:96px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    font-family:'Space Grotesk',sans-serif; font-size:2rem; font-weight:700; color:#06121f;
+  }
+  .logo-preview{
+    width:56px; height:56px; border-radius:50%; overflow:hidden; background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; color:#06121f; font-size:1.1rem;
+  }
+
+  /* ===== HOME ===== */
+  .home-hero{padding-top:80px;}
+  .home-logo{font-size:1.4rem; margin-bottom:60px;}
+  .home-logo span{color:var(--accent);}
+  .role-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:36px;}
+  .role-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:26px; text-align:left; transition:border-color 0.2s ease;
+  }
+  .role-card:hover{border-color:var(--accent);}
+  .role-card h3{font-size:1.05rem; margin-bottom:8px;}
+  .role-card p{color:var(--text-dim); font-size:0.86rem; margin-bottom:18px;}
+  @media (max-width:560px){ .role-grid{grid-template-columns:1fr;} }
+
+  /* ===== ADMIN ===== */
+  .client-row{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:18px 0; border-bottom:1px solid var(--border);
+  }
+  .client-row:last-child{border-bottom:none;}
+  .client-name{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.02rem;}
+  .client-meta{color:var(--text-dim); font-size:0.8rem; margin-top:3px;}
+  .client-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .empty-state{padding:40px 0; text-align:center; color:var(--text-dim);}
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:12px 22px; border-radius:var(--radius); font-size:0.88rem;
+    opacity:0; pointer-events:none; transition:opacity 0.25s ease, transform 0.25s ease;
+    z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ===== PUBLIC TAP PAGE ===== */
+  .public-wrap{
+    max-width:420px; margin:0 auto; min-height:100vh; padding:56px 24px 60px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .public-name{font-size:1.5rem; text-align:center; margin-top:20px;}
+  .public-sub{color:var(--text-dim); font-size:0.85rem; margin-top:6px; text-align:center;}
+  .link-list{width:100%; margin-top:36px; display:flex; flex-direction:column; gap:12px;}
+  .link-pill{
+    position:relative; overflow:hidden;
+    display:flex; align-items:center; gap:14px; width:100%;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 18px; min-height:52px; transition:border-color 0.2s ease, transform 0.15s ease;
+  }
+  .link-pill:hover{border-color:var(--accent); transform:translateY(-1px);}
+  .link-pill:active{transform:scale(0.98);}
+  .link-pill .icon-wrap{
+    width:38px; height:38px; border-radius:50%; background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center; color:var(--accent); flex-shrink:0;
+  }
+  .link-pill .label{font-weight:600; font-size:0.96rem;}
+  .not-found{padding-top:120px; text-align:center;}
+
+  /* ===== EDIT VIEW ===== */
+  .link-item{
+    display:flex; align-items:center; gap:12px; padding:14px; background:var(--bg);
+    border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:10px;
+  }
+  .link-item .icon-wrap{
+    width:34px; height:34px; border-radius:50%; background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center; color:var(--accent); flex-shrink:0;
+  }
+  .link-item .info{flex:1; min-width:0;}
+  .link-item .info .lbl{font-weight:600; font-size:0.92rem;}
+  .link-item .info .url{color:var(--text-dim); font-size:0.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .link-item .actions{display:flex; gap:6px; flex-shrink:0;}
+  .color-swatches{display:flex; gap:10px; margin-top:8px;}
+  .swatch{width:32px; height:32px; border-radius:50%; border:2px solid transparent; cursor:pointer;}
+  .swatch.selected{border-color:var(--text);}
+  .pin-display{
+    font-family:'IBM Plex Mono',monospace; font-size:1.6rem; letter-spacing:0.2em;
+    background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:14px; text-align:center; color:var(--accent);
+  }
+  .gate-box{max-width:360px; margin:100px auto 0;}
+
+  /* ===== EDIT LAYOUT + LIVE PREVIEW ===== */
+  .edit-layout{display:flex; gap:44px; align-items:flex-start;}
+  .edit-col{flex:1; min-width:0;}
+  .preview-col{width:296px; flex-shrink:0; position:sticky; top:32px;}
+  .phone-frame{
+    width:280px; margin:0 auto; border:8px solid var(--surface-2); border-radius:36px;
+    background:var(--bg); overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.45);
+  }
+  .phone-notch{width:110px; height:16px; background:var(--surface-2); border-radius:0 0 12px 12px; margin:0 auto;}
+  .phone-screen{
+    height:540px; overflow-y:auto; padding:30px 16px 20px;
+    display:flex; flex-direction:column; align-items:center;
+    scrollbar-width:thin;
+  }
+  .phone-screen::-webkit-scrollbar{width:4px;}
+  .phone-screen::-webkit-scrollbar-thumb{background:var(--border); border-radius:2px;}
+  @media (max-width:880px){
+    .edit-layout{flex-direction:column;}
+    .preview-col{width:100%; position:static; order:-1; margin-bottom:8px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- ============ HOME ============ -->
+<div class="view" id="view-home">
+  <div class="shell home-hero">
+    <div class="home-logo"><strong>LinkTap<span>.</span></strong></div>
+    <span class="eyebrow">Tap-to-link platform</span>
+    <h1 style="font-size:2rem; max-width:16ch;">One tag. One tap. Always up to date.</h1>
+    <p class="muted mt-16" style="max-width:42ch;">Customers tap the NFC tag, land on a page with your socials and reviews. You update what's on it anytime — no reprinting, no new tags.</p>
+
+    <div class="role-grid">
+      <div class="role-card">
+        <h3>I run the platform</h3>
+        <p>Create client pages, get PINs and links to hand out.</p>
+        <button class="btn btn-ghost btn-block" onclick="goTo({admin:1})">Admin login</button>
+      </div>
+      <div class="role-card">
+        <h3>I'm a client</h3>
+        <p>Use the private edit link you were given, or enter it here.</p>
+        <div class="field mt-16" style="margin-bottom:10px;">
+          <input type="text" id="homeSlugInput" placeholder="your-page-slug">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="goToClientEdit()">Edit my page</button>
+      </div>
+    </div>
+
+    <p class="muted small mt-32">Viewing a tap tag directly? It opens straight to the public page — no login needed.</p>
+  </div>
+</div>
+
+<!-- ============ ADMIN GATE ============ -->
+<div class="view" id="view-admin-gate">
+  <div class="shell gate-box">
+    <div class="card">
+      <span class="eyebrow">Admin</span>
+      <h2 style="font-size:1.3rem;">Enter admin PIN</h2>
+      <p class="muted small mt-8">Default PIN is <span class="mono">1234</span> — change it after logging in.</p>
+      <div class="field mt-24">
+        <input type="password" inputmode="numeric" id="adminPinInput" placeholder="••••">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="tryAdminLogin()">Unlock</button>
+      <button class="btn btn-ghost btn-block mt-8" onclick="goTo({})">Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN DASHBOARD ============ -->
+<div class="view" id="view-admin">
+  <div class="shell-wide">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+      <div>
+        <span class="eyebrow">Admin dashboard</span>
+        <h2 style="font-size:1.6rem;">Your clients</h2>
+      </div>
+      <div class="row">
+        <button class="btn btn-ghost btn-sm" onclick="openAdminSettings()">Settings</button>
+        <button class="btn btn-ghost btn-sm" onclick="goTo({})">Log out</button>
+      </div>
+    </div>
+
+    <div class="card mt-24">
+      <h3 style="font-size:1.05rem;">Add a new client</h3>
+      <div class="mt-16">
+        <div class="field">
+          <label for="newBizName">Business name</label>
+          <input type="text" id="newBizName" placeholder="e.g. Bella Hair Studio">
+        </div>
+        <div class="field">
+          <label for="newSlug">Page slug (this becomes the public URL)</label>
+          <input type="text" id="newSlug" placeholder="auto-generated from name">
+        </div>
+        <button class="btn btn-primary" onclick="createClient()">Create client page</button>
+      </div>
+    </div>
+
+    <div id="newClientCredentials"></div>
+
+    <div class="divider"></div>
+
+    <div id="clientList"></div>
+  </div>
+</div>
+
+<!-- ============ ADMIN: VIEW CREDENTIALS MODAL-ISH PANEL ============ -->
+<div class="view" id="view-admin-detail">
+  <div class="shell">
+    <button class="btn btn-ghost btn-sm" onclick="goTo({admin:1})">&larr; Back to dashboard</button>
+    <div class="card mt-24" id="adminDetailCard"></div>
+  </div>
+</div>
+
+<!-- ============ PUBLIC TAP PAGE ============ -->
+<div class="view" id="view-public">
+  <div class="public-wrap" id="publicContent"></div>
+</div>
+
+<!-- ============ CLIENT EDIT GATE ============ -->
+<div class="view" id="view-edit-gate">
+  <div class="shell gate-box">
+    <div class="card" id="editGateCard"></div>
+  </div>
+</div>
+
+<!-- ============ CLIENT EDIT DASHBOARD ============ -->
+<div class="view" id="view-edit">
+  <div class="shell-wide">
+    <div class="edit-layout">
+      <div class="edit-col">
+        <span class="eyebrow" id="editSlugLabel"></span>
+        <h2 style="font-size:1.5rem;">Edit your page</h2>
+
+        <div class="card mt-24">
+          <div class="field">
+            <label for="editBizName">Business name</label>
+            <input type="text" id="editBizName" oninput="onProfileFieldInput()">
+          </div>
+
+          <label class="small muted">Logo</label>
+          <div class="row mt-8" style="align-items:center;">
+            <div class="logo-preview" id="logoPreviewWrap"></div>
+            <div style="flex:1;">
+              <input type="text" id="logoUrlInput" placeholder="Paste an image URL" oninput="onLogoUrlInput()">
+            </div>
+          </div>
+          <div class="row mt-8">
+            <label class="btn btn-ghost btn-sm" for="logoFileInput">Upload image</label>
+            <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoFile(event)">
+            <button class="btn btn-ghost btn-sm" id="removeLogoBtn" onclick="removeLogo()">Remove logo</button>
+          </div>
+
+          <label class="small muted mt-16" style="display:block;">Avatar color (used if no logo is set)</label>
+          <div class="color-swatches" id="colorSwatches"></div>
+
+          <div class="field mt-16">
+            <label for="editBio">Bio / tagline (optional)</label>
+            <input type="text" id="editBio" maxlength="140" placeholder="e.g. Small-batch coffee, roasted weekly" oninput="onProfileFieldInput()">
+          </div>
+
+          <button class="btn btn-primary btn-sm mt-16" onclick="saveProfile()">Save profile</button>
+        </div>
+
+        <div class="card mt-24">
+          <h3 style="font-size:1rem;">Add a link</h3>
+          <div class="field mt-16">
+            <label for="linkType">Type</label>
+            <select id="linkType" onchange="onLinkTypePreset()">
+              <option value="tiktok">TikTok</option>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="google">Google Reviews</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="website">Website</option>
+              <option value="phone">Phone</option>
+              <option value="custom">Custom link</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="linkLabel">Label (shown to customers)</label>
+            <input type="text" id="linkLabel" placeholder="e.g. Follow on TikTok">
+          </div>
+          <div class="field">
+            <label for="linkUrl">URL</label>
+            <input type="text" id="linkUrl" placeholder="https://...">
+          </div>
+          <button class="btn btn-primary" onclick="addLink()">Add link</button>
+        </div>
+
+        <div class="mt-24">
+          <h3 style="font-size:1rem; margin-bottom:14px;">Your links</h3>
+          <div id="editLinkList"></div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="row" style="flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="copyPublicUrlFromEdit()">Copy public tap URL</button>
+          <button class="btn btn-ghost btn-sm" onclick="previewPublic()">Open full public page</button>
+        </div>
+      </div>
+
+      <div class="preview-col">
+        <p class="small muted center" style="margin-bottom:12px;">Customer's view — updates live</p>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen" id="livePreviewScreen"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STORAGE HELPERS
+============================================================ */
+async function storageGet(key){
+  try{
+    const res = await window.storage.get(key, true);
+    return res ? res.value : null;
+  }catch(e){ return null; }
+}
+async function storageSet(key, value){
+  try{
+    await window.storage.set(key, value, true);
+    return true;
+  }catch(e){ return false; }
+}
+async function storageDelete(key){
+  try{ await window.storage.delete(key, true); }catch(e){}
+}
+
+function parseJSON(str, fallback){
+  if(!str) return fallback;
+  try{ return JSON.parse(str); }catch(e){ return fallback; }
+}
+
+/* ============================================================
+   TOAST
+============================================================ */
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('show'), 2200);
+}
+
+function copyText(str){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(str).then(()=> toast('Copied to clipboard'));
+  } else {
+    toast('Copy not supported — select manually');
+  }
+}
+
+/* ============================================================
+   RIPPLE EFFECT ON BUTTONS / PILLS (signature interaction)
+============================================================ */
+document.addEventListener('click', function(e){
+  const target = e.target.closest('.btn, .link-pill');
+  if(!target) return;
+  const rect = target.getBoundingClientRect();
+  const span = document.createElement('span');
+  const size = Math.max(rect.width, rect.height);
+  span.className = 'ripple-span';
+  span.style.width = span.style.height = size + 'px';
+  span.style.left = (e.clientX - rect.left - size/2) + 'px';
+  span.style.top = (e.clientY - rect.top - size/2) + 'px';
+  if(getComputedStyle(target).position === 'static'){ target.style.position = 'relative'; }
+  target.appendChild(span);
+  setTimeout(()=> span.remove(), 650);
+});
+
+/* ============================================================
+   ICONS (generic, non-branded glyphs)
+============================================================ */
+function iconSvg(type){
+  const icons = {
+    tiktok: '<path d="M9 3v11.2a2.8 2.8 0 1 1-2-2.68" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M9 3c.3 2 1.8 3.6 4 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+    instagram: '<rect x="3.5" y="3.5" width="13" height="13" rx="4" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="10" cy="10" r="3.2" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="14" cy="6" r="0.9" fill="currentColor"/>',
+    facebook: '<rect x="3.5" y="3.5" width="13" height="13" rx="3" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M11.5 8.2h-1.4c-.6 0-1 .4-1 1v1h2.3l-.3 2h-2v4.3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    google: '<path d="M10 2.5l1.9 4.3 4.7.5-3.5 3.2 1 4.6L10 12.8l-4.1 2.3 1-4.6-3.5-3.2 4.7-.5z" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/>',
+    whatsapp: '<circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M7 12.2c0 0 .8 1 2.4 1.2 2.2.3 3.6-1.6 3.1-2.6-.4-.8-1.5-.5-1.7.1-.1.4.1.7.4.9" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>',
+    website: '<circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M3.5 10h13M10 3.5c2 2 2 11 0 13M10 3.5c-2 2-2 11 0 13" stroke="currentColor" stroke-width="1.3" fill="none"/>',
+    phone: '<path d="M6 3.5h2l1 3-1.5 1.3a8 8 0 0 0 4.7 4.7l1.3-1.5 3 1v2c0 1-1 1.7-2 1.5-5-1-9-5-10-10-.2-1 .5-2 1.5-2z" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/>',
+    custom: '<path d="M8.5 11.5l3-3M7.8 8.2l-1.4 1.4a2.5 2.5 0 0 0 3.5 3.5l1.4-1.4M12.2 11.8l1.4-1.4a2.5 2.5 0 0 0-3.5-3.5l-1.4 1.4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>'
+  };
+  return '<svg width="20" height="20" viewBox="0 0 20 20">' + (icons[type] || icons.custom) + '</svg>';
+}
+const linkTypeLabels = {
+  tiktok:'TikTok', instagram:'Instagram', facebook:'Facebook', google:'Google Reviews',
+  whatsapp:'WhatsApp', website:'Website', phone:'Call us', custom:'Custom link'
+};
+const linkTypePlaceholders = {
+  tiktok:'https://tiktok.com/@yourhandle', instagram:'https://instagram.com/yourhandle',
+  facebook:'https://facebook.com/yourpage', google:'https://g.page/r/your-review-link',
+  whatsapp:'https://wa.me/1234567890', website:'https://yourbusiness.com',
+  phone:'tel:+1234567890', custom:'https://...'
+};
+
+/* ============================================================
+   ROUTER
+============================================================ */
+const AVATAR_COLORS = ['#4CC3FF','#FF6B6B','#4ADE80','#FFC24C','#C084FC','#FF8FB3'];
+
+function getParams(){ return new URLSearchParams(window.location.search); }
+function goTo(paramsObj){
+  const usp = new URLSearchParams();
+  Object.keys(paramsObj).forEach(k => usp.set(k, paramsObj[k]));
+  const qs = usp.toString();
+  window.location.search = qs; // triggers reload + re-route
+}
+function goToClientEdit(){
+  const v = document.getElementById('homeSlugInput').value.trim();
+  if(!v){ toast('Enter your page slug first'); return; }
+  goTo({slug:v, edit:1});
+}
+
+function showView(id){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+let adminUnlockedThisSession = false;
+
+async function route(){
+  const p = getParams();
+  if(p.has('admin')){
+    if(adminUnlockedThisSession){
+      showView('view-admin');
+      await loadAdminDashboard();
+    } else {
+      showView('view-admin-gate');
+    }
+    return;
+  }
+  if(p.has('slug')){
+    const slug = p.get('slug');
+    if(p.has('edit')){
+      showView('view-edit-gate');
+      await renderEditGate(slug);
+    } else {
+      showView('view-public');
+      await renderPublicPage(slug);
+    }
+    return;
+  }
+  showView('view-home');
+}
+window.addEventListener('DOMContentLoaded', route);
+
+/* ============================================================
+   ADMIN: LOGIN
+============================================================ */
+async function ensureAdminPin(){
+  let pin = await storageGet('config:adminpin');
+  if(pin === null){
+    pin = '1234';
+    await storageSet('config:adminpin', pin);
+  }
+  return pin;
+}
+async function tryAdminLogin(){
+  const entered = document.getElementById('adminPinInput').value.trim();
+  const real = await ensureAdminPin();
+  if(entered === real){
+    adminUnlockedThisSession = true;
+    showView('view-admin');
+    await loadAdminDashboard();
+  } else {
+    toast('Wrong PIN');
+  }
+}
+
+/* ============================================================
+   ADMIN: SETTINGS (change admin pin)
+============================================================ */
+async function openAdminSettings(){
+  const current = await ensureAdminPin();
+  const next = prompt('Set a new admin PIN (current: ' + current + ')');
+  if(next && next.trim()){
+    await storageSet('config:adminpin', next.trim());
+    toast('Admin PIN updated');
+  }
+}
+
+/* ============================================================
+   ADMIN: DASHBOARD / CLIENT MANAGEMENT
+============================================================ */
+function slugify(str){
+  return str.toLowerCase().trim()
+    .replace(/[^a-z0-9\s-]/g,'')
+    .replace(/\s+/g,'-')
+    .replace(/-+/g,'-')
+    .slice(0,40);
+}
+document.addEventListener('input', function(e){
+  if(e.target && e.target.id === 'newBizName'){
+    const slugField = document.getElementById('newSlug');
+    if(slugField && !slugField.dataset.touched){
+      slugField.value = slugify(e.target.value);
+    }
+  }
+  if(e.target && e.target.id === 'newSlug'){
+    e.target.dataset.touched = '1';
+  }
+});
+
+async function getClientsIndex(){
+  const raw = await storageGet('clients:index');
+  return parseJSON(raw, []);
+}
+async function saveClientsIndex(arr){
+  await storageSet('clients:index', JSON.stringify(arr));
+}
+function randomPin(){
+  return String(Math.floor(1000 + Math.random()*9000));
+}
+function currentBaseUrl(){
+  return window.location.origin + window.location.pathname;
+}
+
+async function createClient(){
+  const nameEl = document.getElementById('newBizName');
+  const slugEl = document.getElementById('newSlug');
+  const name = nameEl.value.trim();
+  let slug = slugify(slugEl.value.trim() || name);
+  if(!name){ toast('Enter a business name'); return; }
+  if(!slug){ toast('Enter a valid slug'); return; }
+
+  const index = await getClientsIndex();
+  if(index.some(c => c.slug === slug)){
+    toast('That slug is taken — try another');
+    return;
+  }
+  const pin = randomPin();
+  const client = {
+    slug, businessName:name, color:AVATAR_COLORS[Math.floor(Math.random()*AVATAR_COLORS.length)],
+    logoUrl:'', bio:'',
+    pin, links:[], createdAt:new Date().toISOString()
+  };
+  await storageSet('client:'+slug, JSON.stringify(client));
+  index.push({slug, businessName:name, createdAt:client.createdAt});
+  await saveClientsIndex(index);
+
+  nameEl.value=''; slugEl.value=''; slugEl.dataset.touched='';
+  toast('Client page created');
+
+  const publicUrl = currentBaseUrl() + '?slug=' + slug;
+  const editUrl = currentBaseUrl() + '?slug=' + slug + '&edit=1';
+  document.getElementById('newClientCredentials').innerHTML = `
+    <div class="card mt-16" style="border-color:var(--accent);">
+      <h3 style="font-size:1rem;">${escapeHtml(name)} is ready</h3>
+      <p class="muted small mt-8">Program this URL onto the NFC tag:</p>
+      <div class="link-url-copy mt-8">
+        <span class="mono">${publicUrl}</span>
+        <button class="icon-btn" onclick="copyText('${publicUrl}')">⧉</button>
+      </div>
+      <p class="muted small mt-16">Send the client this link + PIN so they can manage their own page:</p>
+      <div class="link-url-copy mt-8">
+        <span class="mono">${editUrl}</span>
+        <button class="icon-btn" onclick="copyText('${editUrl}')">⧉</button>
+      </div>
+      <div class="pin-display mt-8">${pin}</div>
+    </div>
+  `;
+  await loadAdminDashboard();
+}
+
+async function loadAdminDashboard(){
+  const index = await getClientsIndex();
+  const listEl = document.getElementById('clientList');
+  if(index.length === 0){
+    listEl.innerHTML = '<div class="empty-state">No clients yet — create your first one above.</div>';
+    return;
+  }
+  const sorted = [...index].sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  listEl.innerHTML = sorted.map(c => `
+    <div class="client-row">
+      <div>
+        <div class="client-name">${escapeHtml(c.businessName)}</div>
+        <div class="client-meta mono">/${c.slug}</div>
+      </div>
+      <div class="client-actions">
+        <button class="btn btn-ghost btn-sm" onclick="viewClientDetail('${c.slug}')">Manage</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteClient('${c.slug}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function deleteClient(slug){
+  if(!confirm('Delete this client\'s page? This cannot be undone.')) return;
+  const index = await getClientsIndex();
+  const next = index.filter(c => c.slug !== slug);
+  await saveClientsIndex(next);
+  await storageDelete('client:'+slug);
+  toast('Client deleted');
+  await loadAdminDashboard();
+}
+
+async function viewClientDetail(slug){
+  const raw = await storageGet('client:'+slug);
+  const client = parseJSON(raw, null);
+  showView('view-admin-detail');
+  if(!client){
+    document.getElementById('adminDetailCard').innerHTML = '<p class="muted">Client not found.</p>';
+    return;
+  }
+  const publicUrl = currentBaseUrl() + '?slug=' + slug;
+  const editUrl = currentBaseUrl() + '?slug=' + slug + '&edit=1';
+  document.getElementById('adminDetailCard').innerHTML = `
+    <h3 style="font-size:1.1rem;">${escapeHtml(client.businessName)}</h3>
+    <p class="muted small mt-8">${client.links.length} link${client.links.length===1?'':'s'} · created ${new Date(client.createdAt).toLocaleDateString()}</p>
+    <div class="mt-24">
+      <label class="small muted">Public tap URL</label>
+      <div class="link-url-copy mt-8">
+        <span class="mono">${publicUrl}</span>
+        <button class="icon-btn" onclick="copyText('${publicUrl}')">⧉</button>
+      </div>
+    </div>
+    <div class="mt-16">
+      <label class="small muted">Client edit link</label>
+      <div class="link-url-copy mt-8">
+        <span class="mono">${editUrl}</span>
+        <button class="icon-btn" onclick="copyText('${editUrl}')">⧉</button>
+      </div>
+    </div>
+    <div class="mt-16">
+      <label class="small muted">Edit PIN</label>
+      <div class="pin-display mt-8">${client.pin}</div>
+      <button class="btn btn-ghost btn-sm mt-8" onclick="resetClientPin('${slug}')">Generate new PIN</button>
+    </div>
+  `;
+}
+
+async function resetClientPin(slug){
+  const raw = await storageGet('client:'+slug);
+  const client = parseJSON(raw, null);
+  if(!client) return;
+  client.pin = randomPin();
+  await storageSet('client:'+slug, JSON.stringify(client));
+  toast('New PIN generated');
+  viewClientDetail(slug);
+}
+
+/* ============================================================
+   PUBLIC TAP PAGE
+============================================================ */
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+function buildPublicMarkup(client){
+  const initials = initialsFromName(client.businessName);
+  const hasLogo = !!(client.logoUrl && client.logoUrl.length);
+  const avatarInner = hasLogo
+    ? `<img src="${escapeAttr(client.logoUrl)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.background='${client.color}'; this.remove();">`
+    : initials;
+
+  const linksHtml = client.links.length ? client.links.map(l => `
+    <a class="link-pill" href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer">
+      <span class="icon-wrap">${iconSvg(l.type)}</span>
+      <span class="label">${escapeHtml(l.label)}</span>
+    </a>
+  `).join('') : '<p class="muted center mt-24">No links added yet.</p>';
+
+  return `
+    <div class="avatar-ripple">
+      <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+      <div class="avatar-circle" style="${hasLogo ? '' : 'background:'+client.color+';'}">${avatarInner}</div>
+    </div>
+    <div class="public-name">${escapeHtml(client.businessName || 'Your business name')}</div>
+    <div class="public-sub">${client.bio ? escapeHtml(client.bio) : 'Thanks for tapping — find us below'}</div>
+    <div class="link-list">${linksHtml}</div>
+  `;
+}
+
+async function renderPublicPage(slug){
+  const raw = await storageGet('client:'+slug);
+  const client = parseJSON(raw, null);
+  const el = document.getElementById('publicContent');
+  if(!client){
+    el.innerHTML = `
+      <div class="not-found">
+        <h2 style="font-size:1.3rem;">This tag isn't set up yet</h2>
+        <p class="muted mt-8">Ask the business to finish setting up their page.</p>
+      </div>`;
+    return;
+  }
+  el.innerHTML = buildPublicMarkup(client);
+}
+
+function renderLivePreview(){
+  const el = document.getElementById('livePreviewScreen');
+  if(!el || !editingClient) return;
+  el.innerHTML = buildPublicMarkup(editingClient);
+}
+
+function onProfileFieldInput(){
+  if(!editingClient) return;
+  editingClient.businessName = document.getElementById('editBizName').value;
+  editingClient.bio = document.getElementById('editBio').value;
+  renderLivePreview();
+}
+
+/* ============================================================
+   CLIENT EDIT: GATE
+============================================================ */
+let editUnlockedSlug = null;
+
+async function renderEditGate(slug){
+  const raw = await storageGet('client:'+slug);
+  const client = parseJSON(raw, null);
+  const card = document.getElementById('editGateCard');
+  if(!client){
+    card.innerHTML = `
+      <span class="eyebrow">Edit page</span>
+      <h2 style="font-size:1.2rem;">No page found for "${escapeHtml(slug)}"</h2>
+      <p class="muted small mt-8">Ask the platform admin to create your page first.</p>
+      <button class="btn btn-ghost btn-block mt-24" onclick="goTo({})">Back home</button>
+    `;
+    return;
+  }
+  if(editUnlockedSlug === slug){
+    showView('view-edit');
+    await loadEditView(slug);
+    return;
+  }
+  card.innerHTML = `
+    <span class="eyebrow">${escapeHtml(client.businessName)}</span>
+    <h2 style="font-size:1.2rem;">Enter your PIN to edit</h2>
+    <div class="field mt-24">
+      <input type="password" inputmode="numeric" id="clientPinInput" placeholder="••••">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="tryEditLogin('${slug}')">Unlock</button>
+  `;
+}
+async function tryEditLogin(slug){
+  const entered = document.getElementById('clientPinInput').value.trim();
+  const raw = await storageGet('client:'+slug);
+  const client = parseJSON(raw, null);
+  if(client && entered === client.pin){
+    editUnlockedSlug = slug;
+    showView('view-edit');
+    await loadEditView(slug);
+  } else {
+    toast('Wrong PIN');
+  }
+}
+
+/* ============================================================
+   CLIENT EDIT: DASHBOARD
+============================================================ */
+let editingClient = null;
+
+async function loadEditView(slug){
+  const raw = await storageGet('client:'+slug);
+  editingClient = parseJSON(raw, null);
+  if(!editingClient) return;
+  if(editingClient.logoUrl === undefined) editingClient.logoUrl = '';
+  if(editingClient.bio === undefined) editingClient.bio = '';
+  document.getElementById('editSlugLabel').textContent = '/' + slug;
+  document.getElementById('editBizName').value = editingClient.businessName;
+  document.getElementById('editBio').value = editingClient.bio;
+  document.getElementById('logoUrlInput').value = editingClient.logoUrl.startsWith('data:') ? '' : editingClient.logoUrl;
+  renderColorSwatches();
+  renderLogoPreview();
+  renderEditLinks();
+  onLinkTypePreset();
+}
+
+function renderColorSwatches(){
+  const wrap = document.getElementById('colorSwatches');
+  wrap.innerHTML = AVATAR_COLORS.map(c => `
+    <div class="swatch ${editingClient.color===c ? 'selected':''}" style="background:${c}" onclick="pickColor('${c}')"></div>
+  `).join('');
+}
+function pickColor(c){
+  editingClient.color = c;
+  renderColorSwatches();
+  renderLogoPreview();
+}
+
+function escapeAttr(str){
+  return String(str||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function initialsFromName(name){
+  return (name||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+
+function renderLogoPreview(){
+  const wrap = document.getElementById('logoPreviewWrap');
+  const removeBtn = document.getElementById('removeLogoBtn');
+  if(editingClient.logoUrl){
+    wrap.innerHTML = `<img src="${escapeAttr(editingClient.logoUrl)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.background='var(--danger-dim)'; this.remove();">`;
+    removeBtn.style.display = 'inline-flex';
+  } else {
+    wrap.style.background = editingClient.color;
+    wrap.innerHTML = initialsFromName(editingClient.businessName);
+    removeBtn.style.display = 'none';
+  }
+  renderLivePreview();
+}
+
+function onLogoUrlInput(){
+  editingClient.logoUrl = document.getElementById('logoUrlInput').value.trim();
+  renderLogoPreview();
+}
+
+function removeLogo(){
+  editingClient.logoUrl = '';
+  document.getElementById('logoUrlInput').value = '';
+  renderLogoPreview();
+}
+
+function handleLogoFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ toast('Please choose an image file'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = new Image();
+    img.onload = function(){
+      const maxSize = 240;
+      let w = img.width, h = img.height;
+      if(w >= h){ if(w > maxSize){ h = Math.round(h*(maxSize/w)); w = maxSize; } }
+      else { if(h > maxSize){ w = Math.round(w*(maxSize/h)); h = maxSize; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      editingClient.logoUrl = canvas.toDataURL('image/jpeg', 0.82);
+      document.getElementById('logoUrlInput').value = '';
+      renderLogoPreview();
+      toast('Logo ready — click Save profile to keep it');
+    };
+    img.onerror = function(){ toast('Could not read that image'); };
+    img.src = ev.target.result;
+  };
+  reader.onerror = function(){ toast('Could not read that file'); };
+  reader.readAsDataURL(file);
+}
+
+async function persistEditingClient(){
+  await storageSet('client:'+editingClient.slug, JSON.stringify(editingClient));
+}
+
+async function saveProfile(){
+  editingClient.businessName = document.getElementById('editBizName').value.trim() || editingClient.businessName;
+  editingClient.bio = document.getElementById('editBio').value.trim();
+  await persistEditingClient();
+
+  // keep the lightweight index in sync with the display name
+  const index = await getClientsIndex();
+  const idx = index.findIndex(c => c.slug === editingClient.slug);
+  if(idx > -1){ index[idx].businessName = editingClient.businessName; await saveClientsIndex(index); }
+
+  renderLogoPreview();
+  toast('Saved');
+}
+
+function onLinkTypePreset(){
+  const type = document.getElementById('linkType').value;
+  const labelEl = document.getElementById('linkLabel');
+  const urlEl = document.getElementById('linkUrl');
+  if(!labelEl.value) labelEl.value = linkTypeLabels[type];
+  urlEl.placeholder = linkTypePlaceholders[type];
+}
+
+function normalizeUrl(type, url){
+  if(type === 'phone'){
+    return url.startsWith('tel:') ? url : 'tel:' + url.replace(/[^0-9+]/g,'');
+  }
+  if(!/^https?:\/\//i.test(url) && !/^tel:/i.test(url)){
+    return 'https://' + url;
+  }
+  return url;
+}
+
+async function addLink(){
+  const type = document.getElementById('linkType').value;
+  const labelEl = document.getElementById('linkLabel');
+  const urlEl = document.getElementById('linkUrl');
+  const label = labelEl.value.trim();
+  let url = urlEl.value.trim();
+  if(!label || !url){ toast('Add a label and a URL'); return; }
+  url = normalizeUrl(type, url);
+
+  editingClient.links.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), type, label, url });
+  await persistEditingClient();
+  renderEditLinks();
+
+  labelEl.value=''; urlEl.value='';
+  toast('Link added');
+}
+
+function renderEditLinks(){
+  const wrap = document.getElementById('editLinkList');
+  if(!editingClient.links.length){
+    wrap.innerHTML = '<p class="muted small">No links yet — add your first one above.</p>';
+    renderLivePreview();
+    return;
+  }
+  wrap.innerHTML = editingClient.links.map((l,i) => `
+    <div class="link-item">
+      <span class="icon-wrap">${iconSvg(l.type)}</span>
+      <div class="info">
+        <div class="lbl">${escapeHtml(l.label)}</div>
+        <div class="url mono">${escapeHtml(l.url)}</div>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" title="Move up" onclick="moveLink(${i},-1)">↑</button>
+        <button class="icon-btn" title="Move down" onclick="moveLink(${i},1)">↓</button>
+        <button class="icon-btn" title="Remove" onclick="removeLink('${l.id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+  renderLivePreview();
+}
+
+async function removeLink(id){
+  editingClient.links = editingClient.links.filter(l => l.id !== id);
+  await persistEditingClient();
+  renderEditLinks();
+  toast('Link removed');
+}
+
+async function moveLink(index, dir){
+  const target = index + dir;
+  if(target < 0 || target >= editingClient.links.length) return;
+  const arr = editingClient.links;
+  [arr[index], arr[target]] = [arr[target], arr[index]];
+  await persistEditingClient();
+  renderEditLinks();
+}
+
+function copyPublicUrlFromEdit(){
+  copyText(currentBaseUrl() + '?slug=' + editingClient.slug);
+}
+function previewPublic(){
+  window.open(currentBaseUrl() + '?slug=' + editingClient.slug, '_blank');
+}
+</script>
+</body>
+</html>
